@@ -18,6 +18,8 @@ public class BaseType extends Type {
 	
 	public static final BaseType STRING = new BaseType("string");
 	
+	public static final BaseType COMPLEX = new BaseType("complex");
+	
 	public static final BaseType VOID = new BaseType("void");
 
 	@Override

@@ -4,13 +4,17 @@ import java.util.List;
 
 import decaf.Location;
 import decaf.tree.Tree;
+import decaf.tree.Tree.Case;
+import decaf.tree.Tree.Dol;
 import decaf.tree.Tree.ClassDef;
+import decaf.tree.Tree.Default;
 import decaf.tree.Tree.Expr;
 import decaf.tree.Tree.MethodDef;
 import decaf.tree.Tree.LValue;
 import decaf.tree.Tree.TopLevel;
 import decaf.tree.Tree.VarDef;
 import decaf.tree.Tree.TypeLiteral;
+import decaf.tree.Tree.Literal;
 import decaf.utils.MiscUtils;
 
 public class SemValue {
@@ -42,6 +46,10 @@ public class SemValue {
 
 	public List<Expr> elist;
 
+	public List<Case> caselist;
+	
+	public List<Dol> dolist;
+	
 	public TopLevel prog;
 
 	public ClassDef cdef;
@@ -55,6 +63,12 @@ public class SemValue {
 	public Tree stmt;
 
 	public Expr expr;
+
+	public Case cas;
+	
+	public Dol dol;
+	
+	public Default deflt;
 
 	public LValue lvalue;
 
@@ -182,6 +196,19 @@ public class SemValue {
 		case Parser.STATIC:
 			msg = "keyword : static";
 			break;
+		case Parser.CASE:
+			msg = "keyword : case";
+			break;
+		case Parser.DEFAULT:
+			msg = "keyword : default";
+			break;
+		case Parser.REPEAT:
+			msg = "keyword : repeat";
+			break;
+		case Parser.UNTIL:
+			msg = "keyword : until";
+			break;
+			
 
 		// 常量
 		case Parser.LITERAL:

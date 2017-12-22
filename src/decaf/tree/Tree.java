@@ -14,6 +14,17 @@ import decaf.scope.*;
 import decaf.symbol.*;
 import decaf.symbol.Class;
 import decaf.tac.Temp;
+import decaf.tree.Tree.Case;
+import decaf.tree.Tree.Cases;
+import decaf.tree.Tree.Dcopy;
+import decaf.tree.Tree.Default;
+import decaf.tree.Tree.DoStmt;
+import decaf.tree.Tree.Dol;
+import decaf.tree.Tree.Expr;
+import decaf.tree.Tree.PrintComp;
+import decaf.tree.Tree.Scopy;
+import decaf.tree.Tree.SuperExpr;
+import decaf.tree.Tree.Visitor;
 import decaf.utils.IndentPrintWriter;
 import decaf.utils.MiscUtils;
 
@@ -103,11 +114,12 @@ public abstract class Tree {
      * Switch statements, of type Switch.
      */
     public static final int SWITCH = LABELLED + 1;
-
+    public static final int DOSTMT = SWITCH + 1;
+    public static final int DOL = DOSTMT + 1;
     /**
      * Case parts in switch statements, of type Case.
      */
-    public static final int CASE = SWITCH + 1;
+    public static final int CASE = DOL + 1;
 
     /**
      * Synchronized statements, of type Synchonized.
@@ -153,11 +165,16 @@ public abstract class Tree {
      * Return statements, of type Return.
      */
     public static final int RETURN = CONTINUE + 1;
-
+    
+    public static final int DEFAULT = RETURN + 1;
+    public static final int PRINTCOMP = DEFAULT + 1;
+    public static final int DCOPY = PRINTCOMP + 1;
+    public static final int SCOPY = DCOPY + 1;
+    public static final int REPEATUNTIL = SCOPY + 1;
     /**
      * Throw statements, of type Throw.
      */
-    public static final int THROW = RETURN + 1;
+    public static final int THROW = REPEATUNTIL + 1;
 
     /**
      * Assert statements, of type Assert.
@@ -255,7 +272,10 @@ public abstract class Tree {
     public static final int POS = ERRONEOUS + 1;
     public static final int NEG = POS + 1;
     public static final int NOT = NEG + 1;
-    public static final int COMPL = NOT + 1;
+    public static final int CALLAT = NOT + 1;
+    public static final int DOLLAR = CALLAT + 1;
+    public static final int SHAPE = DOLLAR + 1;
+    public static final int COMPL = SHAPE + 1;
     public static final int PREINC = COMPL + 1;
     public static final int PREDEC = PREINC + 1;
     public static final int POSTINC = PREDEC + 1;
@@ -292,7 +312,8 @@ public abstract class Tree {
     public static final int NULL = MOD + 1;
     public static final int CALLEXPR = NULL + 1;
     public static final int THISEXPR = CALLEXPR + 1;
-    public static final int READINTEXPR = THISEXPR + 1;
+    public static final int SUPEREXPR = THISEXPR + 1;
+    public static final int READINTEXPR = SUPEREXPR + 1;
     public static final int READLINEEXPR = READINTEXPR + 1;
     public static final int PRINT = READLINEEXPR + 1;
     
@@ -303,7 +324,7 @@ public abstract class Tree {
     public static final int INT = VOID + 1; 
     public static final int BOOL = INT + 1; 
     public static final int STRING = BOOL + 1; 
-
+    public static final int COMPLEX = STRING + 1;
 
     public Location loc;
     public Type type;
@@ -542,7 +563,160 @@ public abstract class Tree {
     		pw.decIndent();
     	}
    }
+    public static class Cases extends Expr {
+    	
+    	public Expr switchExpr;
+    	public List<Case> cases;
+    	public Default defaults;
+    	
+    	public Cases(Expr switchExpr, List<Case> cases, Default defaults, Location loc) {
+            super(SWITCH, loc);
+            this.switchExpr = switchExpr;
+            this.cases = cases;
+            this.defaults = defaults;
+        }
+    	
+    	@Override
+        public void accept(Visitor v) {
+            v.visitCases(this);
+        }
 
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("cond");
+    		pw.incIndent();
+    		if(switchExpr != null) {
+    			switchExpr.printTo(pw);
+    		}
+    		if (cases != null) {
+    			pw.println("cases");
+        		pw.incIndent();
+    			for (Case s : cases) {
+    				if(s != null)
+        			s.printTo(pw);
+        		}
+    		}
+    		if (defaults != null) {
+    			defaults.printTo(pw);
+    		}
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class Case extends Tree {
+    	
+    	public Literal constant;
+    	public Expr toexpr;
+    	
+    	public Case(Expr constant, Expr toexpr, Location loc) {
+    		super(CASE, loc);
+    		this.constant = (Literal)constant;
+    		this.toexpr = toexpr;
+    	}
+    	
+    	@Override
+        public void accept(Visitor v) {
+            v.visitCase(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("case");
+    		pw.incIndent();
+    		if(constant != null) constant.printTo(pw);
+    		if(toexpr != null) toexpr.printTo(pw);
+    		pw.decIndent();
+    	}
+    	
+    }
+    
+    public static class Default extends Tree {
+    	
+    	public Expr toexpr;
+    	
+    	public Default(Expr toexpr, Location loc) {
+    		super(DEFAULT, loc);
+    		this.toexpr = toexpr;
+    	}
+    	
+    	@Override
+        public void accept(Visitor v) {
+            v.visitDefault(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("default");
+    		pw.incIndent();
+    		if(toexpr != null) toexpr.printTo(pw);
+    	}
+    	
+    }
+    public static class DoStmt extends Tree {
+    	
+    	public List<Dol> dols;
+    	public Dol dol;
+    	
+    	public DoStmt(List<Dol> dols, Dol dol, Location loc) {
+            super(DOSTMT, loc);
+            this.dols = dols;
+            this.dol = dol;
+        }
+    	
+    	@Override
+        public void accept(Visitor v) {
+            v.visitDoStmt(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("do");
+    		pw.incIndent();
+    		if (dols != null) {
+    			pw.println("branches");
+        		pw.incIndent();
+    			for (Dol s : dols) {
+    				if(s != null)
+        			s.printTo(pw);
+        		}
+    		}
+    		if (dol != null) {
+    			dol.printTo(pw);
+    		}
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class Dol extends Tree {
+    	
+    	public Expr toexpr;
+    	public List<Tree> stmt;
+    	
+    	public Dol(Expr toexpr,List<Tree> stmt, Location loc) {
+    		super(DOL, loc);
+    		this.stmt = stmt;
+    		this.toexpr = toexpr;
+    	}
+    	
+    	@Override
+        public void accept(Visitor v) {
+            v.visitDol(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("branch");
+    		pw.incIndent();
+    		if(toexpr != null) toexpr.printTo(pw);
+    		if(stmt != null) {
+    			for(Tree s : stmt) {
+    				s.printTo(pw);
+    			}
+    		}
+    		pw.decIndent();
+    	}
+    	
+    }
     /**
       * A for loop.
       */
@@ -728,7 +902,78 @@ public abstract class Tree {
     		}
     	}
     }
+    public static class Dcopy extends Expr {
 
+    	public Expr expr;
+
+        public Dcopy(Expr expr, Location loc) {
+            super(DCOPY, loc);
+            this.expr = expr;
+        }
+
+        @Override
+        public void accept(Visitor v) {
+            v.visitDcopy(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("dcopy");
+    		if (expr != null) {
+    			pw.incIndent();
+    			expr.printTo(pw);
+    			pw.decIndent();
+    		}
+    	}
+    }
+    public static class Scopy extends Expr {
+
+    	public Expr expr;
+
+        public Scopy(Expr expr, Location loc) {
+            super(SCOPY, loc);
+            this.expr = expr;
+        }
+
+        @Override
+        public void accept(Visitor v) {
+            v.visitScopy(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("scopy");
+    		if (expr != null) {
+    			pw.incIndent();
+    			expr.printTo(pw);
+    			pw.decIndent();
+    		}
+    	}
+    }
+    public static class PrintComp extends Tree {
+
+    	public List<Expr> exprs;
+
+    	public PrintComp(List<Expr> exprs, Location loc) {
+    		super(PRINTCOMP, loc);
+    		this.exprs = exprs;
+    	}
+
+        @Override
+        public void accept(Visitor v) {
+            v.visitPrintComp(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("printcomp");
+    		pw.incIndent();
+    		for (Expr e : exprs) {
+    			e.printTo(pw);
+    		}
+    		pw.decIndent();
+        }
+    }
     public abstract static class Expr extends Tree {
 
     	public Type type;
@@ -910,6 +1155,15 @@ public abstract class Tree {
     		case NOT:
     			unaryOperatorToString(pw, "not");
     			break;
+    		case CALLAT:
+    			unaryOperatorToString(pw, "re");
+    			break;
+    		case DOLLAR:
+    			unaryOperatorToString(pw, "im");
+    			break;
+    		case SHAPE:
+    			unaryOperatorToString(pw, "compcast");
+    			break;
 			}
     	}
    }
@@ -1079,7 +1333,22 @@ public abstract class Tree {
     		pw.println("this");
     	}
    }
+    public static class SuperExpr extends Expr {
 
+    	public SuperExpr(Location loc) {
+    		super(SUPEREXPR, loc);
+    	}
+
+    	@Override
+    	public void accept(Visitor visitor) {
+    		visitor.visitSuperExpr(this);
+    	}
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("super");
+    	}
+   }
     /**
       * A type cast.
       */
@@ -1230,6 +1499,9 @@ public abstract class Tree {
     		case BOOL:
     			pw.println("boolconst " + value);
     			break;
+    		case COMPLEX:
+    			pw.println("imgconst " + value + "j");
+    			break;
     		default:
     			pw.println("stringconst " + MiscUtils.quote((String)value));
     		}
@@ -1291,6 +1563,9 @@ public abstract class Tree {
     			break;
     		case VOID:
     			pw.print("voidtype");
+    			break;
+    		case COMPLEX:
+    			pw.print("comptype");
     			break;
     		default:
     			pw.print("stringtype");
@@ -1482,7 +1757,35 @@ public abstract class Tree {
         public void visitTypeArray(TypeArray that) {
             visitTree(that);
         }
-
+        public void visitPrintComp(PrintComp that) {
+            visitTree(that);
+        }
+        public void visitDcopy(Dcopy that) {
+            visitTree(that);
+        }
+        public void visitDoStmt(DoStmt that) {
+            visitTree(that);
+        }
+        public void visitDol(Dol that) {
+            visitTree(that);
+        }
+        public void visitScopy(Scopy that) {
+            visitTree(that);
+        }
+        public void visitSuperExpr(SuperExpr that) {
+            visitTree(that);
+        }
+        public void visitCases(Cases that) {
+        	visitTree(that);
+        }
+        
+        public void visitCase(Case that) {
+        	visitTree(that);
+        }
+        
+        public void visitDefault(Default that) {
+        	visitTree(that);
+        }
         public void visitTree(Tree that) {
             assert false;
         }

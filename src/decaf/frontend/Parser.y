@@ -24,16 +24,19 @@ import java.util.*;
 %Jnodebug
 %Jnoconstruct
 
-%token VOID   BOOL  INT   STRING  CLASS 
-%token NULL   EXTENDS     THIS     WHILE   FOR   
+%token VOID   BOOL  INT   STRING   CLASS 
+%token NULL   EXTENDS  THIS  WHILE   FOR   
 %token IF     ELSE        RETURN   BREAK   NEW
 %token PRINT  READ_INTEGER         READ_LINE
 %token LITERAL
 %token IDENTIFIER	  AND    OR    STATIC  INSTANCEOF
 %token LESS_EQUAL   GREATER_EQUAL  EQUAL   NOT_EQUAL
 %token '+'  '-'  '*'  '/'  '%'  '='  '>'  '<'  '.'
-%token ','  ';'  '!'  '('  ')'  '['  ']'  '{'  '}'
+%token ','  ';'  '!'  '('  ')'  '['  ']'  '{'  '}'	'?'	':'
+%token REPEAT	UNTIL
+%token CALLAT	SHAPE DOLLAR
 
+%right '?' ':'
 %left OR
 %left AND 
 %nonassoc EQUAL NOT_EQUAL
@@ -89,6 +92,10 @@ Type            :	INT
                 |	STRING
                 	{
                 		$$.type = new Tree.TypeIdent(Tree.STRING, $1.loc);
+                	}
+                |	COMPLEX
+                	{
+                		$$.type = new Tree.TypeIdent(Tree.COMPLEX, $1.loc);
                 	}
                 |	CLASS IDENTIFIER
                 	{
@@ -191,11 +198,14 @@ Stmt		    :	VariableDef
                 |	IfStmt
                 |	WhileStmt
                 |	ForStmt
+                |	DoStmt
                 |	ReturnStmt ';'
                 |	PrintStmt ';'
+                |	PrintCompStmt ';'
                 |	BreakStmt ';'
                 |	StmtBlock
                 ;
+
 
 SimpleStmt      :	LValue '=' Expr
 					{
@@ -246,6 +256,9 @@ Expr            :	LValue
 					}
                 |	Call
                 |	Constant
+                |	CaseS
+                |	Dcopy
+                |	Scopy
                 |	Expr '+' Expr
                 	{
                 		$$.expr = new Tree.Binary(Tree.PLUS, $1.expr, $3.expr, $2.loc);
@@ -310,6 +323,18 @@ Expr            :	LValue
                 	{
                 		$$.expr = new Tree.Unary(Tree.NOT, $2.expr, $1.loc);
                 	}
+                |	CALLAT Expr
+                	{
+                		$$.expr = new Tree.Unary(Tree.CALLAT, $2.expr, $1.loc);
+                	}
+                |	DOLLAR Expr
+                	{
+                		$$.expr = new Tree.Unary(Tree.DOLLAR, $2.expr, $1.loc);
+                	}
+                |	SHAPE Expr
+                	{
+                		$$.expr = new Tree.Unary(Tree.SHAPE, $2.expr, $1.loc);
+                	}
                 |	READ_INTEGER '(' ')'
                 	{
                 		$$.expr = new Tree.ReadIntExpr($1.loc);
@@ -321,6 +346,10 @@ Expr            :	LValue
                 |	THIS
                 	{
                 		$$.expr = new Tree.ThisExpr($1.loc);
+                	}
+                |	SUPER
+                	{
+                		$$.expr = new Tree.SuperExpr($1.loc);
                 	}
                 |	NEW IDENTIFIER '(' ')'
                 	{
@@ -368,7 +397,60 @@ ExprList        :	ExprList ',' Expr
 						$$.elist.add($1.expr);
                 	}
                 ;
-    
+
+CaseS		:	CASE '(' Expr ')' '{' CaseStmtList DefaultStmt '}'
+					{
+						$$.expr = new Tree.Cases($3.expr, $6.caselist, $7.deflt, $1.loc);
+					}	
+				;
+				
+				
+CaseStmtList	:	CaseStmtList CaseStmt
+					{
+						$$.caselist.add($2.cas);
+					}
+				|	/* empty */
+					{
+						$$ = new SemValue();
+						$$.caselist = new ArrayList<Tree.Case>();
+					}
+				;
+				
+CaseStmt		:	Constant ':' Expr ';'
+					{
+						$$.cas = new Tree.Case($1.expr, $3.expr, $1.loc);
+					}
+				;
+				
+DefaultStmt		:	DEFAULT ':' Expr ';'
+					{
+						$$.deflt = new Tree.Default($3.expr, $1.loc);
+					}
+					;
+DoStmt		:	DO  DoBranch DoSubStmt OD
+					{
+						$$.stmt = new Tree.DoStmt($2.dolist, $3.dol, $1.loc);
+					}	
+				;
+				
+				
+DoBranch 	:	DoBranch DoSubStmt  DOP
+					{
+						$$.dolist.add($2.dol);
+					}
+				|	/* empty */
+					{
+						$$ = new SemValue();
+						$$.dolist = new ArrayList<Tree.Dol>();
+					}
+				;
+				
+DoSubStmt		:	Expr ':' Stmt
+					{
+						$$.dol = new Tree.Dol($1.expr, $3.slist, $1.loc);
+					}
+				;
+				
 WhileStmt       :	WHILE '(' Expr ')' Stmt
 					{
 						$$.stmt = new Tree.WhileLoop($3.expr, $5.stmt, $1.loc);
@@ -380,6 +462,7 @@ ForStmt         :	FOR '(' SimpleStmt ';' Expr ';'	SimpleStmt ')' Stmt
 						$$.stmt = new Tree.ForLoop($3.stmt, $5.expr, $7.stmt, $9.stmt, $1.loc);
 					}
                 ;
+
 
 BreakStmt       :	BREAK
 					{
@@ -416,6 +499,21 @@ ReturnStmt      :	RETURN Expr
 PrintStmt       :	PRINT '(' ExprList ')'
 					{
 						$$.stmt = new Print($3.elist, $1.loc);
+					}
+                ;
+Dcopy       :	DCOPY '(' Expr ')'
+					{
+						$$.expr = new Tree.Dcopy($3.expr, $1.loc);
+					}
+                ;
+Scopy       :	SCOPY '(' Expr ')'
+					{
+						$$.expr = new Tree.Scopy($3.expr, $1.loc);
+					}
+                ;              
+PrintCompStmt       :	PRINTCOMP '(' ExprList ')'
+					{
+						$$.stmt = new Tree.PrintComp($3.elist, $1.loc);
 					}
                 ;
 
